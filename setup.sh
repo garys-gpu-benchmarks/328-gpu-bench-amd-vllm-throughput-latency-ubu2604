@@ -611,12 +611,12 @@ PY
       die "vLLM API-server extras (uvloop/fastapi/aiohttp) failed."
     "${PYTHON_BIN}" -c 'import vllm, uvloop; print(f"vLLM {vllm.__version__}")' ||
       die "Official vLLM ROCm wheel verification failed."
-    # vLLM 0.23 infers ROCm from amdsmi even when the workbook Framework
-    # cell does not name amd-smi. Install it before the bootstrap import.
-    "${PYTHON_BIN}" -m pip install amdsmi
+    # vLLM 0.23 ROCm platform detection imports amdsmi. Without it the
+    # engine stays on UnspecifiedPlatform and api_server dies at argparse.
+    "${PYTHON_BIN}" -m pip install amdsmi ||
+      die "vLLM ROCm platform requires the amdsmi Python package."
     "${PYTHON_BIN}" -c 'import amdsmi' ||
       die "amdsmi installation verification failed."
-    install_status_log_step amdsmi "installed and verified Python amdsmi package"
     # Importing torch first empties amdsmi handles on this stack. A .pth
     # import runs before vLLM argparse so baseline/extended can infer ROCm.
     # Do not install sitecustomize.py: Ubuntu's /usr/lib/python3.14 copy wins.
