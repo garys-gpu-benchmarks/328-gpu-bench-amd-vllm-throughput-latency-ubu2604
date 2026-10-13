@@ -649,14 +649,6 @@ PY
       die "vLLM API-server extras (uvloop/fastapi/aiohttp) failed."
     gpu_check "Official vLLM ROCm wheel verification failed." \
       "${PYTHON_BIN}" -c 'import vllm, uvloop; print(f"vLLM {vllm.__version__}")'
-    # vLLM 0.23 ROCm platform detection imports amdsmi even when the workbook
-    # Framework cell does not list amd-smi. Without this package the server
-    # stays on UnspecifiedPlatform and argparse dies with
-    # "Failed to infer device type".
-    "${PYTHON_BIN}" -m pip install amdsmi
-    "${PYTHON_BIN}" -c 'import amdsmi' ||
-      die "amdsmi installation verification failed."
-    install_status_log_step amdsmi "installed and verified Python amdsmi package"
     # Importing torch first empties amdsmi handles on this stack. A .pth
     # import runs before vLLM argparse so baseline/extended can infer ROCm.
     # Do not install sitecustomize.py: Ubuntu's /usr/lib/python3.14 copy wins.
@@ -665,9 +657,15 @@ PY
     if [[ ! -f "${src_custom}" ]]; then
       die "Missing ${src_custom}; published clones must ship scripts/templates/vllm_rocm_sitecustomize.py."
     fi
+    # vLLM 0.23 selects RocmPlatform only when amdsmi_get_processor_handles()
+    # is non-empty. The bootstrap below imports amdsmi before torch.
+    "${PYTHON_BIN}" -m pip install amdsmi
+    "${PYTHON_BIN}" -c 'import amdsmi' ||
+      die "amdsmi installation verification failed."
     cp -a "${src_custom}" "${site_pkg}/vllm_rocm_bootstrap.py"
     printf '%s\n' 'import vllm_rocm_bootstrap' > "${site_pkg}/vllm_rocm_bootstrap.pth"
     install_status_log_step vllm "installed and verified official ROCm wheel"
+    install_status_log_step amdsmi "installed and verified Python amdsmi package for vLLM ROCm platform detection"
   fi
   if grep -Eiq '(^|[,[:space:]])amd-smi([,[:space:]]|$)' <<< "${framework}"; then
     "${PYTHON_BIN}" -m pip install amdsmi
