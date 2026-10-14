@@ -80,6 +80,8 @@ AITER_REPO_URL="${AITER_REPO_URL:-https://github.com/ROCm/aiter.git}"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_NAME="$(basename "${REPO_ROOT}")"
 cd "${REPO_ROOT}"
+# shellcheck disable=SC1091
+source "${REPO_ROOT}/scripts/lib/keep_running_kernel.sh"
 if [[ -z "${SGLANG_SOURCE_DIR}" ]]; then
   SGLANG_SOURCE_DIR="${REPO_ROOT}/third_party/sglang"
 elif [[ "${SGLANG_SOURCE_DIR}" != "${REPO_ROOT}/"* ]]; then
@@ -93,6 +95,7 @@ elif [[ "${AITER_SOURCE_DIR}" != "${REPO_ROOT}/"* ]]; then
   AITER_SOURCE_DIR="${REPO_ROOT}/third_party/aiter"
 fi
 if ! command -v python3 >/dev/null 2>&1; then
+  keep_running_kernel
   DEBIAN_FRONTEND=noninteractive apt-get update -y
   DEBIAN_FRONTEND=noninteractive apt-get install -y python3
 fi
@@ -469,7 +472,6 @@ if [[ "${ASSUME_YES}" != 1 && "${SKIP_ROCM}" != 1 ]]; then
   echo "workload and checks the GPU, then reports SETUP complete."
   echo "Status is in results/install_status.txt and mirrored to /etc/motd."
   echo "Executed install commands are listed in results/install_commands.txt."
-  echo "Completion is announced with wall message: setup.sh now complete"
   echo "Press Enter to continue."
   read -r _
 fi
@@ -481,6 +483,7 @@ fi
 
 if [[ "$(uname -s)" == "Linux" && -x /usr/bin/apt-get ]]; then
   PYTHON_MINOR="${PYTHON_TARGET_VERSION}"
+  keep_running_kernel
   run_privileged env DEBIAN_FRONTEND=noninteractive apt-get update -y
   run_privileged env DEBIAN_FRONTEND=noninteractive apt-get install -y \
     python3 python3-venv "python${PYTHON_MINOR}-venv" python3-pip ripgrep sqlite3 autoconf automake libtool libtool-bin m4 pkg-config flex bison cmake build-essential ninja-build numactl git curl protobuf-compiler libprotobuf-dev acl
@@ -657,15 +660,16 @@ PY
     if [[ ! -f "${src_custom}" ]]; then
       die "Missing ${src_custom}; published clones must ship scripts/templates/vllm_rocm_sitecustomize.py."
     fi
-    # vLLM 0.23 selects RocmPlatform only when amdsmi_get_processor_handles()
-    # is non-empty. The bootstrap below imports amdsmi before torch.
-    "${PYTHON_BIN}" -m pip install amdsmi
-    "${PYTHON_BIN}" -c 'import amdsmi' ||
-      die "amdsmi installation verification failed."
     cp -a "${src_custom}" "${site_pkg}/vllm_rocm_bootstrap.py"
     printf '%s\n' 'import vllm_rocm_bootstrap' > "${site_pkg}/vllm_rocm_bootstrap.pth"
+    # vLLM 0.23 infers ROCm from amdsmi_get_processor_handles(). The bootstrap
+    # above no-ops when amdsmi is absent, and these workloads do not list
+    # amd-smi in Framework, so install it here before the API server starts.
+    "${PYTHON_BIN}" -m pip install amdsmi ||
+      die "amdsmi is required so vLLM can infer the ROCm device."
+    "${PYTHON_BIN}" -c 'import amdsmi' ||
+      die "amdsmi installation verification failed."
     install_status_log_step vllm "installed and verified official ROCm wheel"
-    install_status_log_step amdsmi "installed and verified Python amdsmi package for vLLM ROCm platform detection"
   fi
   if grep -Eiq '(^|[,[:space:]])amd-smi([,[:space:]]|$)' <<< "${framework}"; then
     "${PYTHON_BIN}" -m pip install amdsmi
@@ -761,14 +765,17 @@ if [[ -n "${workload_framework:-}${workload_name:-}" ]]; then
       log_warn "iperf3 package install deferred"
     install_status_log_step iperf3 "iperf3 available or install attempted"
   fi
-  if grep -Eiq 'linux pmu|perf |stress-ng' <<< "${workload_framework}${workload_name}"; then
+  if grep -Eiq 'stress-ng' <<< "${workload_framework}${workload_name}"; then
     command -v stress-ng >/dev/null 2>&1 || run_privileged env DEBIAN_FRONTEND=noninteractive apt-get install -y stress-ng ||
       log_warn "stress-ng package install deferred"
-    if ! command -v perf >/dev/null 2>&1; then
-      run_privileged env DEBIAN_FRONTEND=noninteractive apt-get install -y linux-tools-common linux-tools-generic \
-        "linux-tools-$(uname -r)" || log_warn "linux-tools/perf package install deferred"
-    fi
-    install_status_log_step perf "perf and stress-ng available or install attempted"
+    install_status_log_step stress-ng "stress-ng available or install attempted"
+  fi
+  if [[ "${BENCHMARK_INSTALL_PERF:-0}" == "1" ]] || grep -Eiq 'linux pmu|linux perf|(^|[^[:alnum:]_])perf([^[:alnum:]_]|$)' <<< "${workload_framework}${workload_name}"; then
+    # linux-tools-generic depends on the newest kernel image and headers.
+    # A missing linux-tools package for this kernel fails the perf workload.
+    run_privileged env DEBIAN_FRONTEND=noninteractive apt-get install -y linux-tools-common \
+      "linux-tools-$(uname -r)"
+    install_status_log_step perf "installed linux-tools for the running kernel"
   fi
 fi
 
@@ -1014,7 +1021,6 @@ if [[ "${GPU_CHECKS_AFTER_REBOOT}" == 1 ]]; then
   fi
   install_status_log_phase "All software installed. Rebooting once to load the amdgpu driver; after the reboot setup builds the workload, checks the GPU, and reports SETUP complete"
   log_resume_event "Rebooting once now that everything is installed (postponed amdgpu reboot)"
-  command -v wall >/dev/null 2>&1 && echo "setup.sh: everything installed; rebooting once to load the amdgpu driver" | wall || true
   run_privileged reboot
   exit 0
 fi
@@ -1030,5 +1036,4 @@ if ! cleanup_resume_service; then
   log_warn "Setup completed, but resume-service cleanup was deferred; rerun setup.sh to retry cleanup."
 fi
 install_status_sync_motd
-command -v wall >/dev/null 2>&1 && echo "setup.sh now complete" | wall || true
 log_pass "setup.sh now complete"
