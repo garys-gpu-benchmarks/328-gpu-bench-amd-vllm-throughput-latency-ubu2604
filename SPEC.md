@@ -37,7 +37,7 @@ sample_index,status,output_token_throughput_tokens_s,tokens_per_sec,time_to_firs
 - **#2: Time To First Token, ms** — stored as `ttft_p50_msec`.
 - **#3: Time Per Output Token, ms** — stored as `time_per_output_token_tpot_p50_msec`.
 - **#4: Inter-token latency, ms** — stored as `inter_token_latency_itl_p50_msec`.
-- **#5: End-to-end request latency, ms** — stored as `end_to_end_request_latency_msec`.
+- **#5: End-to-end request latency p50, ms** — stored as `end_to_end_request_latency_msec`.
 
 ## Framework
 
