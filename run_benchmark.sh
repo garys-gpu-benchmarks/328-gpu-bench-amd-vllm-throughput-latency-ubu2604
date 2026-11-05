@@ -2,7 +2,7 @@
 # File: run_benchmark.sh
 # Version: 1.0.0
 # Description: Every profile launches a real vLLM OpenAI-compatible server.
-# Execution: bash run_benchmark.sh [--smoke|--baseline|--extended] [--validate]
+# Execution: bash run_benchmark.sh [--smoke|--baseline|--extended]
 set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_NAME="$(basename "${REPO_ROOT}")"
@@ -24,21 +24,12 @@ Every profile starts python -m vllm.entrypoints.openai.api_server.
 Smoke reduces request dimensions but does not substitute the server.
 The client is scripts/benchmark_serving.py.
 
-Profiles:
+Profiles (default: --smoke):
   --smoke                       Run smoke profile
   --baseline                    Run baseline profile
   --extended                    Run extended profile
 
-Execution:
-  --config <file>               Config file (default: config/benchmark_config.yaml)
-
-Validation and logging:
-  --validate                    Enable result validation (default)
-  --no-validate                 Skip result validation
-  --quiet                       Suppress nonessential stdout
-  --log-level <level>           ERROR|WARN|INFO|DEBUG (default: INFO)
-
-Workload options:
+Parameters (override the profile's value):
   --model-name <value>          Model or weights identifier to load (smoke/baseline/extended: mistralai/Mistral-7B-v0.3)
   --dtype <value>               Tensor, element, or storage data type (smoke/baseline/extended: bfloat16)
   --tensor-parallel-size <n>    Number of GPUs across which model tensors are sharded (smoke/baseline/extended: 1)
@@ -48,9 +39,18 @@ Workload options:
   --max-num-seqs <n>            Maximum sequences the inference engine processes concurrently (smoke 2, baseline 8, extended 16)
   --max-concurrency <n>         Maximum client-side requests in flight (smoke 2, baseline 8, extended 8)
 
-Information:
+General options:
+  --config <file>               Config file (default: config/benchmark_config.yaml)
+  --quiet                       Suppress nonessential stdout
+  --log-level <level>           ERROR|WARN|INFO|DEBUG (default: INFO)
   --specification               Print this workload's specification and exit
   --help                        Show this help and exit
+
+Examples:
+  bash run_benchmark.sh --smoke
+  bash run_benchmark.sh --baseline
+  bash run_benchmark.sh --extended
+  bash run_benchmark.sh --baseline --max-concurrency 4
 USAGE
 }
 
@@ -81,7 +81,6 @@ done
 
 PROFILE="smoke"
 CONFIG_FILE="config/benchmark_config.yaml"
-VALIDATE=1
 QUIET=0
 LOG_LEVEL_VALUE="INFO"
 MODEL_NAME=""
@@ -100,8 +99,7 @@ while [[ $# -gt 0 ]]; do
     --baseline) PROFILE="baseline"; shift ;;
     --extended) PROFILE="extended"; shift ;;
     --config) CONFIG_FILE="${2:-}"; shift 2 ;;
-    --validate) VALIDATE=1; shift ;;
-    --no-validate) VALIDATE=0; shift ;;
+    --validate) shift ;;  # ignored; result validation always runs
     --quiet) QUIET=1; shift ;;
     --log-level) LOG_LEVEL_VALUE="${2:-}"; shift 2 ;;
     --model-name) MODEL_NAME="${2:-}"; shift 2 ;;
@@ -187,7 +185,6 @@ case "${DTYPE}" in
 esac
 
 BENCHMARK_RUN_COMMAND="bash run_benchmark.sh --${PROFILE}"
-[[ "${VALIDATE}" -eq 1 ]] && BENCHMARK_RUN_COMMAND+=" --validate"
 BENCHMARK_RUN_COMMAND+=" --model-name ${MODEL_NAME} --dtype ${DTYPE} --tensor-parallel-size ${TENSOR_PARALLEL_SIZE} --gpu-memory-utilization ${GPU_MEMORY_UTILIZATION} --prompt-source ${PROMPT_SOURCE} --input-len ${INPUT_LEN} --output-len ${OUTPUT_LEN} --max-num-seqs ${MAX_NUM_SEQS} --max-concurrency ${MAX_CONCURRENCY}"
 set_benchmark_run_command "${BENCHMARK_RUN_COMMAND}"
 
@@ -252,7 +249,7 @@ run_validate() {
 
 run_collection
 run_parse
-[[ "${VALIDATE}" -eq 1 ]] && run_validate
+run_validate
 record_benchmark_stop
 capture_journal_warnings "${RUN_DIR}" "${BENCHMARK_START_DATETIME}" "${STOP_TIME}"
 bash scripts/collect_hw_sw_info.sh "${RUN_DIR}"
