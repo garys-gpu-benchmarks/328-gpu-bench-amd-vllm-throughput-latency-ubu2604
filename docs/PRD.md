@@ -21,7 +21,7 @@ Start python -m vllm.entrypoints.openai.api_server --model mistralai/Mistral-7B-
 Measure vLLM serving throughput and latency
 
 ## Validation Objective
-Validates token throughput and request latency from concurrent completions against the real vLLM OpenAI server. Every profile starts python -m vllm.entrypoints.openai.api_server
+Validates token throughput and request latency from concurrent completions on the real vLLM server
 
 ## Workload Category
 LLM Inference & Serving
