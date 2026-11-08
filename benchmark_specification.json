@@ -205,14 +205,14 @@
     "value": "MI300X"
   },
   {
-    "field_name": "Raw Output Format",
-    "source_file": "BenchmarkSpecDefinitions.xlsx::Workload_Definitions",
-    "value": "raw_results.csv with the serving summary written twice. Alias columns repeat the same p50 values under both _ms and _msec names"
-  },
-  {
     "field_name": "Primary Record Granularity",
     "source_file": "BenchmarkSpecDefinitions.xlsx::Workload_Definitions",
     "value": "one serving summary, written as two identical samples"
+  },
+  {
+    "field_name": "Raw Output Format",
+    "source_file": "BenchmarkSpecDefinitions.xlsx::Workload_Definitions",
+    "value": "raw_results.csv with the serving summary written twice. Alias columns repeat the same p50 values under both _ms and _msec names"
   },
   {
     "field_name": "Raw Output Example",
@@ -225,14 +225,14 @@
     "value": "output_token_throughput_tokens_sec, ttft_p50_msec, time_per_output_token_tpot_p50_msec, inter_token_latency_itl_p50_msec, end_to_end_request_latency_msec. The same p50 values are also written as output_token_throughput_tokens_s, ttft_p50_ms, tpot_p50_ms, itl_p50_ms, end_to_end_request_latency_ms"
   },
   {
-    "field_name": "Success Criteria",
-    "source_file": "BenchmarkSpecDefinitions.xlsx::Workload_Definitions",
-    "value": "status=ok and throughput, TTFT, TPOT, and end-to-end latency are finite"
-  },
-  {
     "field_name": "Parser and Normalization Notes",
     "source_file": "BenchmarkSpecDefinitions.xlsx::Workload_Definitions",
     "value": "Parse raw_results.csv. Requests are streamed: TTFT is time to the first token chunk; TPOT = (E2E - TTFT) / (output tokens - 1), using usage.completion_tokens from stream_options.include_usage; ITL p50 is over every inter-token gap. Column names that say p50_p95_p99 hold p50 only, including end_to_end_request_latency_ms. The summary is written twice"
+  },
+  {
+    "field_name": "Success Criteria",
+    "source_file": "BenchmarkSpecDefinitions.xlsx::Workload_Definitions",
+    "value": "status=ok and throughput, TTFT, TPOT, and end-to-end latency are finite"
   },
   {
     "field_name": "Hardware Config",
