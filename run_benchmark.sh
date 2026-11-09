@@ -45,9 +45,8 @@ Parameters (override the profile's value):
                                   baseline: 13320
                                   extended: 16500
   --max-num-seqs <n>            Maximum sequences the inference engine processes concurrently
-                                  smoke:    2
-                                  baseline: 8
-                                  extended: 16
+                                  smoke:             2
+                                  baseline/extended: 8
   --max-concurrency <n>         Maximum client-side requests in flight
                                   smoke:             2
                                   baseline/extended: 8
