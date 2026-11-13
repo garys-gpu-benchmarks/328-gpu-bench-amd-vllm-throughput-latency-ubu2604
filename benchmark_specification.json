@@ -40,6 +40,11 @@
     "value": "Start python -m vllm.entrypoints.openai.api_server on port 8000, then run scripts/benchmark_serving.py"
   },
   {
+    "field_name": "Execution Description With Parameters",
+    "source_file": "BenchmarkSpecDefinitions.xlsx::Workload_Definitions",
+    "value": "Starts python -m vllm.entrypoints.openai.api_server with mistralai/Mistral-7B-v0.3 on 127.0.0.1:8000 for every profile, waits for /v1/models, runs scripts/benchmark_serving.py once, then stops the server. input_len, output_len, and concurrency come from yaml. Measures serving throughput, TTFT, TPOT, ITL, and end-to-end latency. output_format: csv"
+  },
+  {
     "field_name": "Metrics",
     "source_file": "BenchmarkSpecDefinitions.xlsx::Workload_Definitions",
     "value": "#1: Output token throughput (output_token_throughput_tokens_sec); #2: Time To First Token, ms (ttft_p50_msec); #3: Time Per Output Token, ms (time_per_output_token_tpot_p50_msec); #4: Inter-token latency, ms (inter_token_latency_itl_p50_msec); #5: End-to-end request latency p50, ms (end_to_end_request_latency_msec)"
@@ -173,11 +178,6 @@
     "field_name": "Command Methodology",
     "source_file": "BenchmarkSpecDefinitions.xlsx::Workload_Definitions",
     "value": "Start python -m vllm.entrypoints.openai.api_server with mistralai/Mistral-7B-v0.3 on 127.0.0.1:8000 for every profile, wait for /v1/models, and run scripts/benchmark_serving.py once with yaml input_len, output_len, and concurrency. Measure token throughput, TTFT, TPOT, ITL, and end-to-end request latency"
-  },
-  {
-    "field_name": "Execution Description With Parameters",
-    "source_file": "BenchmarkSpecDefinitions.xlsx::Workload_Definitions",
-    "value": "Starts python -m vllm.entrypoints.openai.api_server with mistralai/Mistral-7B-v0.3 on 127.0.0.1:8000 for every profile, waits for /v1/models, runs scripts/benchmark_serving.py once, then stops the server. input_len, output_len, and concurrency come from yaml. Measures serving throughput, TTFT, TPOT, ITL, and end-to-end latency. output_format: csv"
   },
   {
     "field_name": "Execution Domain",
